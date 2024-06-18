@@ -1,47 +1,151 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Câmera Prive - Sala ao Vivo</title>
-    <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-    <header>
-        <div class="logo">
-            <h1>Câmera Prive</h1>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="index.html">Início</a></li>
-                <li><a href="login.html">Login</a></li>
-                <li><a href="#modelos">Modelos</a></li>
-                <li><a href="contact.html">Contato</a></li>
-            </ul>
-        </nav>
-    </header>
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-    <main>
-        <section id="sala">
-            <h2>Sala ao Vivo</h2>
-            <div class="video-container">
-                <video id="video-stream" controls autoplay>
-                    <source src="path/to/video.mp4" type="video/mp4">
-                    Seu navegador não suporta o elemento de vídeo.
-                </video>
-            </div>
-            <div class="chat-container">
-                <div id="chat-messages"></div>
-                <input type="text" id="chat-input" placeholder="Digite sua mensagem...">
-                <button id="send-message">Enviar</button>
-            </div>
-        </section>
-    </main>
+app = Flask(__name__)
+app.config.from_object('config')
+db = SQLAlchemy(app)
 
-    <footer>
-        <p>&copy; 2024 Câmera Prive. Todos os direitos reservados.</p>
-    </footer>
+from routes import *
 
-    <script src="js/scripts.js"></script>
-</body>
-</html>
+if __name__ == "__main__":
+    app.run(debug=True)
+    
+    import os
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SECRET_KEY = 'your_secret_key'
+
+from app import db
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+
+class Model(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    bio = db.Column(db.Text)
+    is_online = db.Column(db.Boolean, default=False)
+    
+    from flask import request, jsonify
+from app import app, db
+from models import User, Model
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    new_user = User(username=data['username'], email=data['email'])
+    new_user.password_hash = generate_password_hash(data['password'])
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'User registered successfully!'})
+
+@app.route('/models', methods=['GET'])
+def get_models():
+    models = Model.query.all()
+    return jsonify([model.name for model in models])
+    
+    Flask==2.0.2
+Flask-SQLAlchemy==2.5.1
+Werkzeug==2.0.2
+
+{
+  "name": "cammodel-site",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3",
+    "axios": "^0.21.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  }
+}
+
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import './styles.css';
+
+function App() {
+  const [models, setModels] = useState([]);
+
+  useEffect(() => {
+    axios.get('/models')
+      .then(response => {
+        setModels(response.data);
+      })
+      .catch(error => {
+        console.error("There was an error fetching the models!", error);
+      });
+  }, []);
+
+  return (
+    <div className="App">
+      <h1>Live Models</h1>
+      <ul>
+        {models.map(model => (
+          <li key={model}>{model}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+import React from 'react';
+import ReactDOM from 'react-dom';
+import './index.css';
+import App from './App';
+
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root')
+);
+
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.App {
+  text-align: center;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  background: #fff;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+
+
+
